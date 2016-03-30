@@ -1141,11 +1141,20 @@
 	if(!window.JSON){ throw new Error("Include JSON first: ajax.cdnjs.com/ajax/libs/json2/20110223/json2.js") } // for old IE use
 
 	;(function(exports){
+		var isReactNative = navigator.product==='ReactNative';
 		function s(){}
-		s.put = function(key, val, cb){ try{ store.setItem(key, Gun.text.ify(val)) }catch(e){if(cb)cb(e)} }
-		s.get = function(key, cb){ /*setTimeout(function(){*/ try{ cb(null, Gun.obj.ify(store.getItem(key) || null)) }catch(e){cb(e)} /*},1)*/} 
-		s.del = function(key){ return store.removeItem(key) }
-		var store = this.localStorage || {setItem: function(){}, removeItem: function(){}, getItem: function(){}};
+		s.put = function(key, val, cb){ try{
+			var v = Gun.text.ify(val);
+			isReactNative ? store.putItem(key,v).then(function(){cb();}).catch(cb) : store.putItem(key, v);
+		}catch(e){if(cb)cb(e)} }
+		s.get = function(key, cb){ /*setTimeout(function(){*/ try{
+			var getSuccess = function(k){ cb(null, Gun.obj.ify(k || null)); };
+			isReactNative ? store.getItem(key).then(getSuccess).catch(cb) : getSuccess(store.getItem(key));
+		}catch(e){cb(e)} /*},1)*/}
+		s.del = function(key){
+			return isReactNative ? Promise.resolve(store.removeItem(key)) : store.removeItem(key);
+		}
+		var store = isReactNative ? require('react-native').AsyncStorage : this.localStorage || {setItem: function(){}, removeItem: function(){}, getItem: function(){}};
 		exports.store = s;
 	}.bind(this || module)(Tab));
 
